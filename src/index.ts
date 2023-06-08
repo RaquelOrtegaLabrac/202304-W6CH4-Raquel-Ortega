@@ -1,39 +1,42 @@
 import http from 'http';
 import url from 'url';
-import { program } from 'commander';
+// Import { program } from 'commander';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 4444;
-const version = '1.0.0';
 
-program.option('-v, --version');
-program.parse();
-const options = program.opts();
+const server = http.createServer((request, response) => {
+  const calculator = (a: number, b: number) => ({
+    add: a + b,
+    substract: a - b,
+    multiply: a * b,
+    divide: a / b,
+  });
 
-if (options.version) {
-  console.log('Version ' + version);
-  process.exit(0);
-}
+  const { pathname, query } = url.parse(request.url!, true);
 
-const server = http.createServer((req, res) => {
-  if (!req.url) {
-    server.emit('error', new Error('No url in the request'));
-    return;
-  }
-
-  const { pathname } = url.parse(req.url);
-
-  if (req.method !== 'GET') {
+  if (request.method !== 'GET') {
     server.emit('error', new Error('Invalid method'));
+    response.write(`<h1>Invalid method</h1>`);
+    response.end();
     return;
   }
 
-  res.write(`<h1>Hola ${pathname!.toUpperCase()}</h1>`);
-  res.write(req.method);
-  res.write(req.url);
-  res.end();
+  const { a, b } = query;
+
+  if (isNaN(Number(a)) || isNaN(Number(b))) {
+    server.emit('error', new Error('Invalid data'));
+    response.write('<h1>Invalid data</h1>');
+    response.end();
+    return;
+  }
+
+  const result = calculator(Number(a), Number(b));
+  response.write(`<h1>Results:</h1>
+  <p>${a}+${b} = ${result.add}</p>`);
+  response.end();
 });
 
 server.listen(PORT);
